@@ -26,7 +26,7 @@ OPENROUTER_API_KEY=your-key-here
 
 ### Add PDFs
 
-Put any PDFs you want indexed into the `data/` directory.
+Drop any PDFs into the `data/` directory (already included in the repo).
 
 ## Usage
 
