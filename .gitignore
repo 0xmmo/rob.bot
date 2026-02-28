@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.env
+.rag-cache/
+data/
+data_backup/
