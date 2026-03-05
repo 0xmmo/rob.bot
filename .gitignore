@@ -3,3 +3,5 @@ dist/
 .env
 .rag-cache/
 data_backup/
+client/node_modules/
+client/dist/
