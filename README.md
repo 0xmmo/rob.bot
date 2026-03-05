@@ -1,22 +1,16 @@
 # rob.bot
 
-Terminal chat app with RAG over your PDFs. Drop documents into `data/`, and the bot indexes them locally so it can retrieve relevant pages when you ask questions. Uses [OpenRouter](https://openrouter.ai) for LLM and embedding calls.
+Chat app with RAG over your PDFs. Drop documents into `data/`, and the bot indexes them locally so it can retrieve relevant pages when you ask questions. Uses [OpenRouter](https://openrouter.ai) for LLM and embedding calls.
+
+Comes with a web UI (Express + React) and a terminal UI (blessed).
 
 ## Setup
 
-### Install Node.js
-
 ```bash
 brew install node
-```
-
-### Install Dependencies
-
-```bash
 npm install
+cd client && npm install
 ```
-
-### Configure API Key
 
 Create a `.env` file with your [OpenRouter API key](https://openrouter.ai/keys):
 
@@ -24,19 +18,30 @@ Create a `.env` file with your [OpenRouter API key](https://openrouter.ai/keys):
 OPENROUTER_API_KEY=your-key-here
 ```
 
-### Add PDFs
-
-Drop any PDFs into the `data/` directory (already included in the repo).
+Drop any PDFs into the `data/` directory.
 
 ## Usage
 
+### Web UI
+
 ```bash
-npm start
+npm run dev        # dev mode — Express on :3000, Vite on :5173
+npm run build      # build client for production
+npm start          # production — everything on :3000
 ```
 
-On first run with new PDFs, the app indexes them (text extraction, embeddings, page rendering). Results are cached in `.rag-cache/` so subsequent runs are fast.
+### Terminal UI
 
-`npm run dev` runs with auto-reload for development.
+```bash
+npm run start:tui
+```
+
+### Tests
+
+```bash
+npm run test:e2e         # quick API tests
+npm run test:e2e -- --full   # includes full LLM streaming test
+```
 
 ## How It Works
 
@@ -47,3 +52,9 @@ On first run with new PDFs, the app indexes them (text extraction, embeddings, p
 5. Response streams back in real-time with source citations
 
 File change detection uses hash + mtime so only modified documents get re-indexed.
+
+## API
+
+- `POST /api/chat` — SSE stream (send `{ message, history }`, receive `rag-context`, `token`, `done` events)
+- `GET /api/rag/status` — SSE stream of RAG initialization progress
+- `GET /api/health` — JSON health check

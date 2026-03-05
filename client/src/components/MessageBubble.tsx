@@ -1,11 +1,14 @@
 import type { ChatMessage } from "../types";
+import type { Citation } from "../utils/citations";
 import { SourceCitations } from "./SourceCitations";
+import { MarkdownContent } from "./MarkdownContent";
 
 interface Props {
   message: ChatMessage;
+  onCitationClick?: (citation: Citation) => void;
 }
 
-export function MessageBubble({ message }: Props) {
+export function MessageBubble({ message, onCitationClick }: Props) {
   const isUser = message.role === "user";
 
   return (
@@ -17,7 +20,11 @@ export function MessageBubble({ message }: Props) {
             : "bg-zinc-800 text-zinc-100 border border-zinc-700"
         }`}
       >
-        <div className="whitespace-pre-wrap break-words">{message.content}</div>
+        {isUser ? (
+          <div className="whitespace-pre-wrap break-words">{message.content}</div>
+        ) : (
+          <MarkdownContent content={message.content} onCitationClick={onCitationClick} />
+        )}
         {message.isStreaming && !message.content && (
           <div className="flex gap-1">
             <span className="h-2 w-2 rounded-full bg-zinc-500 animate-bounce" />

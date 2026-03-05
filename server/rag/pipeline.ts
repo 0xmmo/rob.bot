@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import path from "node:path";
 import { readFile, stat } from "node:fs/promises";
 import { RAG_CONFIG } from "./config.js";
 import { extractPdf } from "./pdf-extractor.js";
@@ -28,6 +29,7 @@ export interface RagPipeline {
     sourcesLine: string | null;
     pageImages: PageImage[];
   }>;
+  getPdfPath(source: string): string | null;
   documentCount: number;
   chunkCount: number;
 }
@@ -154,6 +156,14 @@ export async function initRagPipeline(
   return {
     documentCount: totalDocuments,
     chunkCount: allChunks.length,
+    getPdfPath(source: string): string | null {
+      for (const filePath of Object.keys(manifest)) {
+        if (filePath.split("/").pop() === source) {
+          return path.resolve(filePath);
+        }
+      }
+      return null;
+    },
     async query(userMessage: string) {
       if (allChunks.length === 0) {
         return { contextSuffix: null, sourcesLine: null, pageImages: [] };

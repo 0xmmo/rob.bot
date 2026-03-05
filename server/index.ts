@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import express from "express";
 import cors from "cors";
 import { createChatRouter } from "./routes/chat.js";
+import { createPdfRouter } from "./routes/pdf.js";
 import {
   createRagStatusRouter,
   startRagInit,
@@ -46,8 +47,13 @@ const chatRouter = createChatRouter({
 const { router: ragStatusRouter, broadcast: ragBroadcast } =
   createRagStatusRouter(ragState);
 
+const pdfRouter = createPdfRouter({
+  getRagPipeline: () => ragState.pipeline,
+});
+
 app.use("/api/chat", chatRouter);
 app.use("/api/rag/status", ragStatusRouter);
+app.use("/api/pdf", pdfRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({
