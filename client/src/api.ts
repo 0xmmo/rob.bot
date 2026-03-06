@@ -48,11 +48,12 @@ export function parseSSELines(text: string): { events: SSEEvent[]; remainder: st
 export async function* streamChat(
   message: string,
   history: Array<{ role: "user" | "assistant"; content: string }>,
+  localMode?: boolean,
 ): AsyncGenerator<SSEEvent> {
   const response = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message, history }),
+    body: JSON.stringify({ message, history, localMode }),
   });
 
   if (!response.ok) {

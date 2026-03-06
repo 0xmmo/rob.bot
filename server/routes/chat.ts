@@ -5,6 +5,7 @@ import type { RagPipeline } from "../rag/pipeline.js";
 interface ChatRequestBody {
   message: string;
   history: Array<{ role: "user" | "assistant"; content: string }>;
+  localMode?: boolean;
 }
 
 function sseEvent(event: string, data: unknown): string {
@@ -18,7 +19,7 @@ export function createChatRouter(deps: {
   const router = Router();
 
   router.post("/", (req, res) => {
-    const { message, history } = req.body as ChatRequestBody;
+    const { message, history, localMode } = req.body as ChatRequestBody;
 
     if (!message || typeof message !== "string") {
       res.status(400).json({ error: "message is required" });
@@ -66,6 +67,7 @@ export function createChatRouter(deps: {
       deps.getRagPipeline(),
       callbacks,
       abortController.signal,
+      localMode,
     ).catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("[chat] error:", msg);

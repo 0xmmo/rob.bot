@@ -238,6 +238,66 @@ async function consumeStream(
   };
 }
 
+// ── Local mode (throttled output) ────────────────────────────────────────────
+
+const LOCAL_WORDS_PER_SEC = 20;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Wraps ChatCallbacks so that onToken output is buffered and dripped at
+ * ~LOCAL_WORDS_PER_SEC. The real API is still called; only the delivery
+ * to the client is throttled to simulate local-model speeds.
+ */
+function throttledCallbacks(
+  callbacks: ChatCallbacks,
+  signal?: AbortSignal,
+): { wrapped: ChatCallbacks; flush: () => Promise<void> } {
+  let pending = "";       // raw text not yet emitted
+  let draining = false;
+  let resolveFlush: (() => void) | null = null;
+  let done = false;
+
+  const delayMs = 1000 / LOCAL_WORDS_PER_SEC;
+
+  async function drain() {
+    if (draining) return;
+    draining = true;
+    while (pending.length > 0) {
+      if (signal?.aborted) break;
+      // Grab leading whitespace + next word (or just whitespace)
+      const match = pending.match(/^\s*\S+\s?/) ?? pending.match(/^\s+/);
+      if (!match) break;
+      const word = match[0];
+      pending = pending.slice(word.length);
+      callbacks.onToken(word);
+      await sleep(delayMs);
+    }
+    draining = false;
+    if (done && pending.length === 0 && resolveFlush) {
+      resolveFlush();
+    }
+  }
+
+  const wrapped: ChatCallbacks = {
+    ...callbacks,
+    onToken(content: string) {
+      pending += content;
+      drain();
+    },
+  };
+
+  function flush(): Promise<void> {
+    done = true;
+    if (pending.length === 0 && !draining) return Promise.resolve();
+    return new Promise((resolve) => {
+      resolveFlush = resolve;
+      drain();
+    });
+  }
+
+  return { wrapped, flush };
+}
+
 // ── Main entry point ────────────────────────────────────────────────────────
 
 export async function streamChat(
@@ -247,7 +307,17 @@ export async function streamChat(
   ragPipeline: RagPipeline | null,
   callbacks: ChatCallbacks,
   signal?: AbortSignal,
+  localMode?: boolean,
 ): Promise<void> {
+  // In local mode, wrap callbacks to throttle token delivery to ~20 words/sec
+  let activeCallbacks = callbacks;
+  let flushThrottle: (() => Promise<void>) | null = null;
+  if (localMode) {
+    const { wrapped, flush } = throttledCallbacks(callbacks, signal);
+    activeCallbacks = wrapped;
+    flushThrottle = flush;
+  }
+
   const t0 = performance.now();
 
   // Build messages: system + history + user
@@ -269,10 +339,11 @@ export async function streamChat(
     signal,
   );
 
-  const result1 = await consumeStream(response1, callbacks, t0, signal);
+  const result1 = await consumeStream(response1, activeCallbacks, t0, signal);
 
   // ── Fast path: no tool call → content was already streamed ────────────
   if (result1.toolCalls.length === 0) {
+    if (flushThrottle) await flushThrottle();
     const durationMs = performance.now() - t0;
     callbacks.onDone(result1.content, durationMs);
     return;
@@ -292,7 +363,7 @@ export async function streamChat(
     searchQueries = [userMessage]; // malformed args fallback
   }
 
-  callbacks.onToolCall(toolCall.name, searchQueries);
+  activeCallbacks.onToolCall(toolCall.name, searchQueries);
 
   // Run RAG pipeline for each query and dedupe results
   let toolResultText: string;
@@ -344,7 +415,7 @@ export async function streamChat(
   }
 
   if (ragSourceInfo) {
-    callbacks.onRagContext(ragSourceInfo);
+    activeCallbacks.onRagContext(ragSourceInfo);
   }
 
   // ── Pass 2: LLM call with tool result (no tools → prevents loops) ────
@@ -400,8 +471,9 @@ export async function streamChat(
     signal,
   );
 
-  const result2 = await consumeStream(response2, callbacks, t0, signal);
+  const result2 = await consumeStream(response2, activeCallbacks, t0, signal);
 
+  if (flushThrottle) await flushThrottle();
   const durationMs = performance.now() - t0;
   callbacks.onDone(result2.content, durationMs);
 }

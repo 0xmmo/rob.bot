@@ -104,7 +104,7 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
   }
 }
 
-export function useChat() {
+export function useChat(localMode: boolean) {
   const [state, dispatch] = useReducer(chatReducer, {
     messages: [],
     isStreaming: false,
@@ -122,7 +122,7 @@ export function useChat() {
         .map((m) => ({ role: m.role, content: m.content }));
 
       try {
-        for await (const event of streamChat(message, history)) {
+        for await (const event of streamChat(message, history, localMode)) {
           const data = JSON.parse(event.data);
 
           switch (event.event) {
@@ -154,7 +154,7 @@ export function useChat() {
         dispatch({ type: "SET_ERROR", error: msg });
       }
     },
-    [state.messages],
+    [state.messages, localMode],
   );
 
   return {

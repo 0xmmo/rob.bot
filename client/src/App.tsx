@@ -8,7 +8,8 @@ import type { Citation } from "./utils/citations";
 
 function App() {
   const ragStatus = useRagStatus();
-  const { messages, isStreaming, error, sendMessage } = useChat();
+  const [localMode, setLocalMode] = useState(false);
+  const { messages, isStreaming, error, sendMessage } = useChat(localMode);
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
 
   return (
@@ -29,6 +30,16 @@ function App() {
           />
         )}
       </div>
+      <button
+        onClick={() => setLocalMode((v) => !v)}
+        className={`fixed top-3 right-4 px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors z-50 ${
+          localMode
+            ? "bg-emerald-600 text-white"
+            : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
+        }`}
+      >
+        {localMode ? "SIM LOCAL" : "CLOUD"}
+      </button>
     </div>
   );
 }
