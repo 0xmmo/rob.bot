@@ -13,8 +13,6 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen bg-zinc-900 text-zinc-100">
-      <header className="border-b border-zinc-700 px-4 py-3">
-      </header>
       <RagStatusBar status={ragStatus} />
       <div className="flex flex-1 min-h-0">
         <ChatWindow
