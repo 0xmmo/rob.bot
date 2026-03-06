@@ -15,7 +15,7 @@ export const RAG_CONFIG = {
   queryPrefix: "Instruct: Retrieve relevant document passages\nQuery: ",
 
   topK: 5,
-  scoreThreshold: 0.3,
+  scoreThreshold: 0.4,
 
   maxChunkLength: 2000,
   chunkOverlap: 100,

@@ -5,7 +5,7 @@ import type { PageImage } from "./rag/context-builder.js";
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL = "qwen/qwen3.5-122b-a10b";
 const SYSTEM_PROMPT =
-  "You are rob.bot, a helpful AI assistant. Be concise and direct.";
+  "You are a helpful and technical AI assistant. Be concise and direct. Use source citations to support your answers.";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 interface Message {

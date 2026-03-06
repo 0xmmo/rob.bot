@@ -12,7 +12,9 @@ type ChatAction =
   | { type: "SEND_MESSAGE"; message: string }
   | { type: "START_ASSISTANT" }
   | { type: "APPEND_TOKEN"; content: string }
+  | { type: "RAG_STATUS" }
   | { type: "RAG_CONTEXT"; sources: SourceInfo }
+  | { type: "REASONING_DONE" }
   | { type: "STREAM_DONE"; fullReply: string }
   | { type: "SET_ERROR"; error: string };
 
@@ -38,7 +40,7 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
         ...state,
         messages: [
           ...state.messages,
-          { id: nextId(), role: "assistant", content: "", isStreaming: true },
+          { id: nextId(), role: "assistant", content: "", isStreaming: true, phase: "gathering" },
         ],
       };
     case "APPEND_TOKEN": {
@@ -52,11 +54,27 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       }
       return { ...state, messages: msgs };
     }
+    case "RAG_STATUS": {
+      const msgs = [...state.messages];
+      const last = msgs[msgs.length - 1];
+      if (last && last.role === "assistant") {
+        msgs[msgs.length - 1] = { ...last, phase: "gathering" };
+      }
+      return { ...state, messages: msgs };
+    }
     case "RAG_CONTEXT": {
       const msgs = [...state.messages];
       const last = msgs[msgs.length - 1];
       if (last && last.role === "assistant") {
-        msgs[msgs.length - 1] = { ...last, sources: action.sources };
+        msgs[msgs.length - 1] = { ...last, sources: action.sources, phase: "thinking" };
+      }
+      return { ...state, messages: msgs };
+    }
+    case "REASONING_DONE": {
+      const msgs = [...state.messages];
+      const last = msgs[msgs.length - 1];
+      if (last && last.role === "assistant") {
+        msgs[msgs.length - 1] = { ...last, phase: "responding" };
       }
       return { ...state, messages: msgs };
     }
@@ -108,11 +126,17 @@ export function useChat() {
           const data = JSON.parse(event.data);
 
           switch (event.event) {
-            case "token":
-              dispatch({ type: "APPEND_TOKEN", content: data.content });
+            case "rag-status":
+              dispatch({ type: "RAG_STATUS" });
               break;
             case "rag-context":
               dispatch({ type: "RAG_CONTEXT", sources: data });
+              break;
+            case "reasoning-done":
+              dispatch({ type: "REASONING_DONE" });
+              break;
+            case "token":
+              dispatch({ type: "APPEND_TOKEN", content: data.content });
               break;
             case "done":
               dispatch({
