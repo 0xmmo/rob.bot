@@ -441,6 +441,7 @@ async function testFullChatStreaming(): Promise<void> {
     const hasError = eventTypes.includes("error");
     const hasToken = eventTypes.includes("token");
     const hasDone = eventTypes.includes("done");
+    const hasToolCall = eventTypes.includes("tool-call");
 
     if (hasError) {
       const errorData = JSON.parse(events.find((e) => e.event === "error")!.data) as { message: string };
@@ -456,6 +457,16 @@ async function testFullChatStreaming(): Promise<void> {
     if (!hasDone) {
       fail(testName, "no done event");
       return;
+    }
+
+    // If tool-call event exists, validate its structure
+    if (hasToolCall) {
+      const toolCallData = JSON.parse(events.find((e) => e.event === "tool-call")!.data) as { tool: string; queries: string[] };
+      if (!toolCallData.tool || !Array.isArray(toolCallData.queries) || toolCallData.queries.length === 0) {
+        fail(testName, "tool-call event missing tool or queries");
+        return;
+      }
+      log(`  (model used tool: ${toolCallData.tool}, queries: ${JSON.stringify(toolCallData.queries.map((q: string) => q.slice(0, 50)))})`);
     }
 
     const doneEvent = events.find((e) => e.event === "done")!;
@@ -478,7 +489,8 @@ async function testFullChatStreaming(): Promise<void> {
     }
 
     const secs = (doneData.durationMs / 1000).toFixed(1);
-    pass(`${testName} — ${events.length} events, ${secs}s, reply: "${doneData.fullReply.slice(0, 50)}"`);
+    const flow = hasToolCall ? "tool-call" : "direct";
+    pass(`${testName} — ${flow} flow, ${events.length} events, ${secs}s, reply: "${doneData.fullReply.slice(0, 50)}"`);
   } catch (err) {
     fail(testName, String(err));
   }

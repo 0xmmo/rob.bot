@@ -34,8 +34,8 @@ export function MessageBubble({ message, onCitationClick }: Props) {
               <span className="h-2 w-2 rounded-full bg-zinc-500 animate-bounce [animation-delay:0.2s]" />
             </div>
             <span className="text-xs text-zinc-400">
-              {message.phase === "gathering" ? "Gathering information..." :
-               message.phase === "thinking" ? "Thinking..." : ""}
+              {message.phase === "thinking" ? "Thinking..." :
+               message.phase === "searching" ? "Gathering information..." : ""}
             </span>
           </div>
         )}

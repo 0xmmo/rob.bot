@@ -1,4 +1,4 @@
-export type StreamPhase = "gathering" | "thinking" | "responding";
+export type StreamPhase = "thinking" | "searching" | "responding";
 
 export interface ChatMessage {
   id: string;
@@ -7,6 +7,7 @@ export interface ChatMessage {
   sources?: SourceInfo | null;
   isStreaming?: boolean;
   phase?: StreamPhase;
+  toolQueries?: string[];
 }
 
 export interface SourceInfo {

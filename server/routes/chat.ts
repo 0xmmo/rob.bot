@@ -35,8 +35,8 @@ export function createChatRouter(deps: {
     res.on("close", () => abortController.abort());
 
     const callbacks: ChatCallbacks = {
-      onRagStatus(statusMessage) {
-        res.write(sseEvent("rag-status", { message: statusMessage }));
+      onToolCall(toolName, queries) {
+        res.write(sseEvent("tool-call", { tool: toolName, queries }));
       },
       onRagContext(info) {
         res.write(sseEvent("rag-context", info));

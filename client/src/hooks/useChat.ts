@@ -12,7 +12,7 @@ type ChatAction =
   | { type: "SEND_MESSAGE"; message: string }
   | { type: "START_ASSISTANT" }
   | { type: "APPEND_TOKEN"; content: string }
-  | { type: "RAG_STATUS" }
+  | { type: "TOOL_CALL"; tool: string; queries: string[] }
   | { type: "RAG_CONTEXT"; sources: SourceInfo }
   | { type: "REASONING_DONE" }
   | { type: "STREAM_DONE"; fullReply: string }
@@ -40,7 +40,7 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
         ...state,
         messages: [
           ...state.messages,
-          { id: nextId(), role: "assistant", content: "", isStreaming: true, phase: "gathering" },
+          { id: nextId(), role: "assistant", content: "", isStreaming: true, phase: "thinking" },
         ],
       };
     case "APPEND_TOKEN": {
@@ -54,11 +54,11 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       }
       return { ...state, messages: msgs };
     }
-    case "RAG_STATUS": {
+    case "TOOL_CALL": {
       const msgs = [...state.messages];
       const last = msgs[msgs.length - 1];
       if (last && last.role === "assistant") {
-        msgs[msgs.length - 1] = { ...last, phase: "gathering" };
+        msgs[msgs.length - 1] = { ...last, phase: "searching", toolQueries: action.queries };
       }
       return { ...state, messages: msgs };
     }
@@ -66,7 +66,7 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       const msgs = [...state.messages];
       const last = msgs[msgs.length - 1];
       if (last && last.role === "assistant") {
-        msgs[msgs.length - 1] = { ...last, sources: action.sources, phase: "thinking" };
+        msgs[msgs.length - 1] = { ...last, sources: action.sources };
       }
       return { ...state, messages: msgs };
     }
@@ -126,8 +126,8 @@ export function useChat() {
           const data = JSON.parse(event.data);
 
           switch (event.event) {
-            case "rag-status":
-              dispatch({ type: "RAG_STATUS" });
+            case "tool-call":
+              dispatch({ type: "TOOL_CALL", tool: data.tool, queries: data.queries });
               break;
             case "rag-context":
               dispatch({ type: "RAG_CONTEXT", sources: data });
